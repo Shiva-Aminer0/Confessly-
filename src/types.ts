@@ -18,6 +18,7 @@ export interface MessageMetadata {
   timestamp: string;
   latitude?: number;
   longitude?: number;
+  deviceName?: string;
 }
 
 export interface Message {

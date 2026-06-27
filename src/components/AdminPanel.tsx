@@ -987,7 +987,9 @@ export default function AdminPanel() {
                               <span className="text-[10px] text-slate-400 flex items-center gap-1">
                                 <Laptop className="w-3 h-3 text-pink-500" /> OS / Device
                               </span>
-                              <p className="font-semibold text-slate-700">{meta?.os} ({meta?.device})</p>
+                              <p className="font-semibold text-slate-700" title={meta?.deviceName}>
+                                {meta?.deviceName || `${meta?.os} (${meta?.device})`}
+                              </p>
                             </div>
 
                             <div className="space-y-0.5">

@@ -11,7 +11,24 @@ import { DatabaseSchema, Message, AdminUser, AuditLog, SystemSettings, Category 
 
 const app = express();
 const PORT = 3000;
-const DB_FILE = path.join(process.cwd(), 'data', 'db.json');
+let DB_FILE = path.join(process.cwd(), 'data', 'db.json');
+
+// Vercel serverless functions have a read-only filesystem except for /tmp.
+if (process.env.VERCEL || process.env.NOW_BUILDER) {
+  const tempDbPath = path.join('/tmp', 'db.json');
+  if (!fs.existsSync(tempDbPath)) {
+    try {
+      const sourceDbPath = path.join(process.cwd(), 'data', 'db.json');
+      if (fs.existsSync(sourceDbPath)) {
+        fs.mkdirSync(path.dirname(tempDbPath), { recursive: true });
+        fs.copyFileSync(sourceDbPath, tempDbPath);
+      }
+    } catch (err) {
+      console.error('Failed to copy database to Vercel temp space', err);
+    }
+  }
+  DB_FILE = tempDbPath;
+}
 
 // Ensure DB directory and file exist
 function initializeDB() {
@@ -207,7 +224,18 @@ const LOCATIONS = [
   { city: 'Seoul', country: 'South Korea' }
 ];
 
-function getIpLocation(ip: string) {
+function getIpLocation(ip: string, headers?: Record<string, any>) {
+  if (headers) {
+    const vercelCity = headers['x-vercel-ip-city'] as string;
+    const vercelCountry = headers['x-vercel-ip-country'] as string;
+    if (vercelCity || vercelCountry) {
+      return {
+        city: vercelCity || 'Unknown City',
+        country: vercelCountry || 'Unknown Country'
+      };
+    }
+  }
+
   let hash = 0;
   for (let i = 0; i < ip.length; i++) {
     hash = ip.charCodeAt(i) + ((hash << 5) - hash);
@@ -221,24 +249,80 @@ function parseUserAgent(ua: string) {
   let browser = 'Chrome';
   let os = 'macOS';
   let device = 'Desktop';
+  let deviceName = 'Desktop PC';
 
-  if (!ua) return { browser, os, device };
+  if (!ua) return { browser, os, device, deviceName };
 
   if (/chrome|crios/i.test(ua)) browser = 'Chrome';
   else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browser = 'Safari';
   else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
   else if (/edge|edg/i.test(ua)) browser = 'Edge';
 
-  if (/windows/i.test(ua)) os = 'Windows';
-  else if (/macintosh|mac os x/i.test(ua)) os = 'macOS';
-  else if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
-  else if (/android/i.test(ua)) os = 'Android';
-  else if (/linux/i.test(ua)) os = 'Linux';
+  if (/windows/i.test(ua)) {
+    os = 'Windows';
+    deviceName = 'Windows PC';
+  } else if (/macintosh|mac os x/i.test(ua)) {
+    os = 'macOS';
+    deviceName = 'Apple Mac';
+  } else if (/iphone/i.test(ua)) {
+    os = 'iOS';
+    device = 'Mobile';
+    deviceName = 'Apple iPhone';
+  } else if (/ipad/i.test(ua)) {
+    os = 'iOS';
+    device = 'Tablet';
+    deviceName = 'Apple iPad';
+  } else if (/android/i.test(ua)) {
+    os = 'Android';
+    device = 'Mobile';
+    deviceName = 'Android Device';
+    
+    // Attempt to extract the Android model number from parenthesized section
+    const match = ua.match(/\(([^)]+)\)/);
+    if (match && match[1]) {
+      const parts = match[1].split(';');
+      const androidPartIndex = parts.findIndex(p => /android/i.test(p));
+      if (androidPartIndex !== -1 && androidPartIndex + 1 < parts.length) {
+        let model = parts[androidPartIndex + 1].trim();
+        if (model.toLowerCase() === 'k' || model.toLowerCase() === 'u') {
+          if (androidPartIndex + 2 < parts.length) {
+            model = parts[androidPartIndex + 2].trim();
+          }
+        }
+        model = model.replace(/build\/.*/i, '').trim();
+        if (model) {
+          if (/samsung|sm-|gt-/i.test(model)) {
+            deviceName = `Samsung (${model})`;
+          } else if (/pixel/i.test(model)) {
+            deviceName = `Google Pixel (${model})`;
+          } else if (/oneplus/i.test(model)) {
+            deviceName = `OnePlus (${model})`;
+          } else if (/xiaomi|redmi|mi /i.test(model)) {
+            deviceName = `Xiaomi (${model})`;
+          } else if (/huawei/i.test(model)) {
+            deviceName = `Huawei (${model})`;
+          } else if (/oppo/i.test(model)) {
+            deviceName = `Oppo (${model})`;
+          } else if (/vivo/i.test(model)) {
+            deviceName = `Vivo (${model})`;
+          } else {
+            deviceName = model;
+          }
+        }
+      }
+    }
+  } else if (/linux/i.test(ua)) {
+    os = 'Linux';
+    deviceName = 'Linux PC';
+  }
 
-  if (/mobile|iphone|android.*mobile/i.test(ua)) device = 'Mobile';
-  else if (/ipad|tablet/i.test(ua)) device = 'Tablet';
+  if (/mobile|iphone|android.*mobile/i.test(ua)) {
+    device = 'Mobile';
+  } else if (/ipad|tablet/i.test(ua)) {
+    device = 'Tablet';
+  }
 
-  return { browser, os, device };
+  return { browser, os, device, deviceName };
 }
 
 // Simple in-memory session registry for security
@@ -361,7 +445,7 @@ async function startServer() {
 
     const token = createSession(user);
     const { browser, os, device } = parseUserAgent(ua);
-    const location = getIpLocation(ip);
+    const location = getIpLocation(ip, req.headers);
     const locationString = `${location.city}, ${location.country}`;
 
     // Update admin user state & log history
@@ -451,7 +535,7 @@ async function startServer() {
     };
 
     const { browser, os, device } = parseUserAgent(ua);
-    const location = getIpLocation(ip);
+    const location = getIpLocation(ip, req.headers);
     const locationString = `${location.city}, ${location.country}`;
 
     newAdmin.lastActive = new Date().toISOString();
@@ -521,8 +605,8 @@ async function startServer() {
     const status = containsProfanity ? 'deleted' : (isPublicBoard ? 'approved' : 'pending'); // Auto-approve if directed to public board
     const approved = isPublicBoard && !containsProfanity;
 
-    const { browser, os, device } = parseUserAgent(ua);
-    const location = getIpLocation(ip);
+    const { browser, os, device, deviceName } = parseUserAgent(ua);
+    const location = getIpLocation(ip, req.headers);
 
     const newMessage: Message = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -541,6 +625,7 @@ async function startServer() {
         browser,
         os,
         device,
+        deviceName: deviceName || device,
         resolution: resolution || 'Unknown',
         language: language || 'en',
         timezone: timezone || 'UTC',
@@ -1049,9 +1134,13 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Confessly is listening on http://0.0.0.0:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Confessly is listening on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
 startServer();
+
+export default app;

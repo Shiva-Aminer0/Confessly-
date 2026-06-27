@@ -216,437 +216,239 @@ function HomeLanding() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-12 relative z-10 space-y-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT SIDE: ADMIN ONBOARDING / CREATOR */}
-          <div className="lg:col-span-6 space-y-6">
-            <div className="space-y-4 text-left">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5" />
-                Live Onboarding
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
-                Create Your Own{' '}
-                <span className="bg-gradient-to-r from-indigo-600 via-pink-500 to-rose-500 bg-clip-text text-transparent">
-                  Anonymous Link
-                </span>
-              </h1>
-              <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
-                Onboard in 10 seconds to generate your custom feedback page. Share it on Instagram, Snapchat, or TikTok to start getting honest, completely anonymous secrets and questions from your followers!
-              </p>
-            </div>
-
-            <div className="bg-white border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/50 space-y-6 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-pink-500 to-rose-500" />
-              
-              <AnimatePresence mode="wait">
-                {!onboardingSuccess ? (
-                  <motion.div
-                    key="onboard-form"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-5"
-                  >
-                    {/* Mode selector */}
-                    <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200/50">
-                      <button
-                        type="button"
-                        onClick={() => { setOnboardingMode('register'); setOnboardingError(null); }}
-                        className={`py-2 text-xs font-bold rounded-lg cursor-pointer transition-all ${
-                          onboardingMode === 'register' 
-                            ? 'bg-white text-indigo-600 shadow-sm' 
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        Create Link (Sign Up)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setOnboardingMode('login'); setOnboardingError(null); }}
-                        className={`py-2 text-xs font-bold rounded-lg cursor-pointer transition-all ${
-                          onboardingMode === 'login' 
-                            ? 'bg-white text-indigo-600 shadow-sm' 
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        Log In to Account
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleOnboardingSubmit} className="space-y-4 text-left">
-                      <div>
-                        <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1.5">
-                          {onboardingMode === 'register' ? 'Choose Username / Link Handle' : 'Username'}
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-slate-400 font-bold font-mono">@</span>
-                          <input
-                            type="text"
-                            placeholder={onboardingMode === 'register' ? 'your_name' : 'your_handle'}
-                            required
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-2xl py-3 pl-9 pr-4 text-slate-900 font-sans font-bold placeholder:text-slate-300 outline-none transition-colors text-base"
-                          />
-                        </div>
-                        {onboardingMode === 'register' && username && (
-                          <p className="text-[11px] text-slate-400 mt-1 font-mono">
-                            Your link: <span className="text-indigo-600 font-bold">{window.location.origin}/@{username.trim().replace(/^@/, '').toLowerCase()}</span>
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1.5">
-                          Password (for admin access)
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-2xl py-3 px-4 text-slate-900 placeholder:text-slate-300 outline-none transition-colors text-base"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                          >
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {onboardingError && (
-                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-medium flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span>{onboardingError}</span>
-                        </div>
-                      )}
-
-                      <button
-                        type="submit"
-                        disabled={isSubmittingOnboarding}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-lg shadow-indigo-600/15 flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer disabled:opacity-75"
-                      >
-                        {isSubmittingOnboarding ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            {onboardingMode === 'register' ? 'Creating...' : 'Logging in...'}
-                          </>
-                        ) : (
-                          <>
-                            {onboardingMode === 'register' ? 'Generate My Live Link! 🔥' : 'Access My Dashboard'}
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
-                    </form>
-
-                    {/* Live Instagram sticker mock */}
-                    {onboardingMode === 'register' && (
-                      <div className="pt-4 border-t border-slate-100">
-                        <span className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-2">Instagram Link Sticker Preview</span>
-                        <div className="h-28 bg-gradient-to-tr from-pink-500 via-red-500 to-yellow-500 rounded-2xl p-4 flex flex-col justify-between text-white shadow-inner relative overflow-hidden">
-                          <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-                          <div className="flex justify-between items-center relative z-10">
-                            <span className="text-[10px] uppercase tracking-wider font-extrabold bg-black/20 px-2 py-0.5 rounded-md">Confessly.com</span>
-                            <div className="w-2.5 h-2.5 rounded-full bg-white/40 animate-pulse" />
-                          </div>
-                          <div className="mx-auto bg-white/95 text-slate-800 rounded-full py-2 px-5 font-bold text-sm tracking-wide shadow-xl flex items-center gap-1.5 scale-95 transition-all relative z-10 border border-white/25">
-                            🔗 confessly.com/@{username.trim() || 'yourname'}
-                          </div>
-                          <div className="text-[9px] text-white/80 font-medium text-center relative z-10">
-                            (Tap here to send an anonymous confession!)
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="onboard-success"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-6 text-center"
-                  >
-                    <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-2xl mx-auto border-4 border-emerald-50">
-                      🎉
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <h3 className="text-xl font-bold text-slate-900">Your Link is Active!</h3>
-                      <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                        Welcome, <strong className="text-slate-800 font-semibold">@{onboardedUser?.username}</strong>! Copy your link below and paste it onto your Instagram stories or bio!
-                      </p>
-                    </div>
-
-                    {/* Active URL box */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-2.5">
-                      <span className="font-mono text-xs font-bold text-indigo-600 truncate pl-1 select-all">
-                        {window.location.origin}/@{onboardedUser?.username}
-                      </span>
-                      <button
-                        onClick={copyToClipboard}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1 shrink-0 ${
-                          copiedLink 
-                            ? 'bg-emerald-600 text-white' 
-                            : 'bg-indigo-600 text-white hover:bg-indigo-500'
-                        }`}
-                      >
-                        {copiedLink ? (
-                          <>
-                            <Check className="w-3.5 h-3.5" /> Copied!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" /> Copy Link
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Simple Instructions list */}
-                    <div className="text-left bg-indigo-50/50 border border-indigo-100/40 rounded-2xl p-4 space-y-3.5">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-700 block">How to get confessions:</span>
-                      <div className="grid grid-cols-1 gap-2.5 text-xs text-slate-600 font-sans">
-                        <div className="flex gap-2">
-                          <span className="w-5 h-5 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center shrink-0 text-[10px]">1</span>
-                          <span>Copy your link above.</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="w-5 h-5 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center shrink-0 text-[10px]">2</span>
-                          <span>Open Instagram and create a new Story.</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="w-5 h-5 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center shrink-0 text-[10px]">3</span>
-                          <span>Select the <strong className="text-slate-800">"Link Sticker"</strong> tool, paste your URL, and write a catchy tag.</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="w-5 h-5 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center shrink-0 text-[10px]">4</span>
-                          <span>Wait for secrets to roll in and reply instantly!</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3.5">
-                      <button
-                        onClick={() => navigate('/admin')}
-                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-1 text-xs cursor-pointer"
-                      >
-                        <Lock className="w-3.5 h-3.5" />
-                        Go to Dashboard
-                      </button>
-                      
-                      <button
-                        onClick={handleSignOut}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-3 px-4 rounded-xl transition-all text-xs cursor-pointer"
-                      >
-                        Sign Out / New Account
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+      <main className="flex-1 max-w-2xl w-full mx-auto px-6 py-12 relative z-10 space-y-10">
+        <div className="space-y-4 text-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-wider mx-auto">
+            <Sparkles className="w-3.5 h-3.5" />
+            Live Onboarding
           </div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
+            Create Your Own{' '}
+            <span className="bg-gradient-to-r from-indigo-600 via-pink-500 to-rose-500 bg-clip-text text-transparent">
+              Anonymous Link
+            </span>
+          </h1>
+          <p className="text-slate-500 text-sm leading-relaxed max-w-lg mx-auto">
+            Onboard in 10 seconds to generate your custom feedback page. Share it on Instagram, Snapchat, or TikTok to start getting honest, completely anonymous secrets and questions from your followers!
+          </p>
+        </div>
 
-          {/* RIGHT SIDE: GLOBAL PUBLIC MESSAGE BOARD */}
-          <div className="lg:col-span-6 space-y-6 text-left">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 border border-pink-100 text-pink-600 text-xs font-bold uppercase tracking-wider">
-                <Globe className="w-3.5 h-3.5" />
-                Global Public Feed
-              </div>
-              <h2 className="text-3xl font-black tracking-tight text-slate-900">
-                Anonymous Public Board
-              </h2>
-              <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
-                Drop an anonymous thought, compliment, or roast directly into our live public message wall below! Select a category and beautiful card theme to make it stand out.
-              </p>
-            </div>
-
-            {/* FORM TO POST CONFESSION */}
-            <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl shadow-slate-950/10 border border-slate-800 space-y-4">
-              <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest block">Post a Live Public Confession 📣</span>
-              
-              <form onSubmit={handlePostConfession} className="space-y-4">
-                <div className="space-y-1.5">
-                  <textarea
-                    placeholder="Type your anonymous confession here..."
-                    required
-                    maxLength={200}
-                    value={newMessageText}
-                    onChange={(e) => setNewMessageText(e.target.value)}
-                    className="w-full min-h-[80px] bg-slate-950/80 border border-slate-800 focus:border-pink-500 rounded-2xl p-3.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none resize-none transition-colors"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-500 px-1">
-                    <span>* Automatically visible on global feed</span>
-                    <span>{newMessageText.length}/200</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Category select */}
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">
-                      Category
-                    </label>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl py-2 px-3 text-xs text-slate-200 font-semibold outline-none cursor-pointer"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {CATEGORY_EMOJIS[c] || '🤫'} {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Theme select */}
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">
-                      Card Theme
-                    </label>
-                    <select
-                      value={selectedThemeId}
-                      onChange={(e) => setSelectedThemeId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl py-2 px-3 text-xs text-slate-200 font-semibold outline-none cursor-pointer"
-                    >
-                      {CARD_THEMES.map((theme) => (
-                        <option key={theme.id} value={theme.id}>
-                          {theme.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Nickname and Submit */}
-                <div className="flex flex-col sm:flex-row items-center gap-3.5 pt-1.5">
-                  <div className="relative w-full sm:flex-1">
-                    <span className="absolute left-3 top-2.5 text-slate-500 text-xs">✍️</span>
-                    <input
-                      type="text"
-                      placeholder="Nickname (e.g. SecretCrush)"
-                      value={newNickname}
-                      onChange={(e) => setNewNickname(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl py-2 pl-8 pr-3 text-xs text-slate-200 outline-none"
-                    />
-                  </div>
-                  
+        <div className="bg-white border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/50 space-y-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-pink-500 to-rose-500" />
+          
+          <AnimatePresence mode="wait">
+            {!onboardingSuccess ? (
+              <motion.div
+                key="onboard-form"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-5"
+              >
+                {/* Mode selector */}
+                <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200/50">
                   <button
-                    type="submit"
-                    disabled={isSubmittingConfession || !newMessageText.trim()}
-                    className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-bold text-xs py-2.5 px-5 rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
+                    type="button"
+                    onClick={() => { setOnboardingMode('register'); setOnboardingError(null); }}
+                    className={`py-2 text-xs font-bold rounded-lg cursor-pointer transition-all ${
+                      onboardingMode === 'register' 
+                        ? 'bg-white text-indigo-600 shadow-sm' 
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
                   >
-                    {isSubmittingConfession ? 'Posting...' : 'Post Confession 📣'}
+                    Create Link (Sign Up)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setOnboardingMode('login'); setOnboardingError(null); }}
+                    className={`py-2 text-xs font-bold rounded-lg cursor-pointer transition-all ${
+                      onboardingMode === 'login' 
+                        ? 'bg-white text-indigo-600 shadow-sm' 
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Log In to Account
                   </button>
                 </div>
-              </form>
 
-              {confessionSuccess && (
-                <div className="p-2.5 bg-emerald-950/40 border border-emerald-900 rounded-xl text-emerald-400 text-[11px] font-semibold text-center flex items-center justify-center gap-1">
-                  ✨ Posted successfully! View it in the stream below.
-                </div>
-              )}
-            </div>
+                <form onSubmit={handleOnboardingSubmit} className="space-y-4 text-left">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1.5">
+                      {onboardingMode === 'register' ? 'Choose Username / Link Handle' : 'Username'}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-3.5 text-slate-400 font-bold font-mono">@</span>
+                      <input
+                        type="text"
+                        placeholder={onboardingMode === 'register' ? 'your_name' : 'your_handle'}
+                        required
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-2xl py-3 pl-9 pr-4 text-slate-900 font-sans font-bold placeholder:text-slate-300 outline-none transition-colors text-base"
+                      />
+                    </div>
+                    {onboardingMode === 'register' && username && (
+                      <p className="text-[11px] text-slate-400 mt-1 font-mono">
+                        Your link: <span className="text-indigo-600 font-bold">{window.location.origin}/@{username.trim().replace(/^@/, '').toLowerCase()}</span>
+                      </p>
+                    )}
+                  </div>
 
-            {/* LIVE STREAM LIST CONTAINER */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
-                <span className="text-xs uppercase font-extrabold tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-pink-500 animate-pulse" />
-                  Recent Public Secrets ({publicMessages.length})
-                </span>
-                <button
-                  onClick={loadPublicBoard}
-                  className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 text-[11px] font-bold cursor-pointer transition-colors"
-                  disabled={publicLoading}
-                  title="Reload feed"
-                >
-                  <RefreshCw className={`w-3 h-3 ${publicLoading ? 'animate-spin' : ''}`} />
-                  {publicLoading ? 'Loading...' : 'Refresh'}
-                </button>
-              </div>
-
-              {publicLoading && publicMessages.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm text-slate-400 space-y-2">
-                  <RefreshCw className="w-6 h-6 animate-spin text-slate-300 mx-auto" />
-                  <p className="text-xs font-semibold">Tuning to global gossip channels...</p>
-                </div>
-              ) : publicError ? (
-                <div className="text-center py-8 text-red-500 text-xs bg-red-50 border border-red-100 rounded-2xl font-medium">
-                  {publicError}
-                </div>
-              ) : publicMessages.length === 0 ? (
-                <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm text-slate-400 space-y-1.5">
-                  <span className="text-3xl block">🤫</span>
-                  <p className="text-xs font-semibold text-slate-500">The wall is quiet right now...</p>
-                  <p className="text-[10px] text-slate-400">Be the first to post a global secret confession!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-1">
-                  {publicMessages.map((msg: any) => {
-                    const themeObj = CARD_THEMES.find(t => t.id === msg.theme) || CARD_THEMES[0];
-                    return (
-                      <motion.div
-                        key={msg.id}
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col justify-between border ${themeObj.bgClass} ${themeObj.textClass} ${themeObj.borderClass}`}
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1.5">
+                      Password (for admin access)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-2xl py-3 px-4 text-slate-900 placeholder:text-slate-300 outline-none transition-colors text-base"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
-                        <div className="space-y-3.5">
-                          {/* Header of card */}
-                          <div className="flex justify-between items-start gap-4">
-                            <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${themeObj.badgeClass}`}>
-                              {CATEGORY_EMOJIS[msg.category] || '🤫'} {msg.category}
-                            </span>
-                            <span className="text-[9px] font-mono opacity-60">
-                              {new Date(msg.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
 
-                          {/* Message Content */}
-                          <p className="text-sm font-sans font-medium italic leading-relaxed whitespace-pre-wrap">
-                            "{msg.message}"
-                          </p>
-                        </div>
+                  {onboardingError && (
+                    <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-medium flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{onboardingError}</span>
+                    </div>
+                  )}
 
-                        {/* Footer of card */}
-                        <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-2.5">
-                          <span className="text-[10px] font-bold opacity-75">
-                            ✍️ {msg.nickname || 'Anonymous'}
-                          </span>
-                          <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-black/10 text-white/90">
-                            sent to @{msg.targetUsername}
-                          </span>
-                        </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingOnboarding}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-lg shadow-indigo-600/15 flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer disabled:opacity-75"
+                  >
+                    {isSubmittingOnboarding ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        {onboardingMode === 'register' ? 'Creating...' : 'Logging in...'}
+                      </>
+                    ) : (
+                      <>
+                        {onboardingMode === 'register' ? 'Generate My Live Link! 🔥' : 'Access My Dashboard'}
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
 
-                        {/* Moderator Reply */}
-                        {msg.reply && (
-                          <div className="mt-4 bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10 text-left relative">
-                            <div className="absolute top-1 right-2 text-[8px] uppercase tracking-wider font-extrabold text-white/50">Reply</div>
-                            <p className="text-[11px] font-semibold text-white/95 mt-0.5">
-                              💬 {msg.reply}
-                            </p>
-                          </div>
-                        )}
-                      </motion.div>
-                    );
-                  })}
+                {/* Live Instagram sticker mock */}
+                {onboardingMode === 'register' && (
+                  <div className="pt-4 border-t border-slate-100">
+                    <span className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-2">Instagram Link Sticker Preview</span>
+                    <div className="h-28 bg-gradient-to-tr from-pink-500 via-red-500 to-yellow-500 rounded-2xl p-4 flex flex-col justify-between text-white shadow-inner relative overflow-hidden">
+                      <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                      <div className="flex justify-between items-center relative z-10">
+                        <span className="text-[10px] uppercase tracking-wider font-extrabold bg-black/20 px-2 py-0.5 rounded-md">Confessly.com</span>
+                        <div className="w-2.5 h-2.5 rounded-full bg-white/40 animate-pulse" />
+                      </div>
+                      <div className="mx-auto bg-white/95 text-slate-800 rounded-full py-2 px-5 font-bold text-sm tracking-wide shadow-xl flex items-center gap-1.5 scale-95 transition-all relative z-10 border border-white/25">
+                        🔗 confessly.com/@{username.trim() || 'yourname'}
+                      </div>
+                      <div className="text-[9px] text-white/80 font-medium text-center relative z-10">
+                        (Tap here to send an anonymous confession!)
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="onboard-success"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-6 text-center"
+              >
+                <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-2xl mx-auto border-4 border-emerald-50">
+                  🎉
                 </div>
-              )}
-            </div>
+                
+                <div className="space-y-1.5">
+                  <h3 className="text-xl font-bold text-slate-900">Your Link is Active!</h3>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                    Welcome, <strong className="text-slate-800 font-semibold">@{onboardedUser?.username}</strong>! Copy your link below and paste it onto your Instagram stories or bio!
+                  </p>
+                </div>
 
-          </div>
+                {/* Active URL box */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-2.5">
+                  <span className="font-mono text-xs font-bold text-indigo-600 truncate pl-1 select-all">
+                    {window.location.origin}/@{onboardedUser?.username}
+                  </span>
+                  <button
+                    onClick={copyToClipboard}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1 shrink-0 ${
+                      copiedLink 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                    }`}
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" /> Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" /> Copy Link
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Simple Instructions list */}
+                <div className="text-left bg-indigo-50/50 border border-indigo-100/40 rounded-2xl p-4 space-y-3.5">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-700 block">How to get confessions:</span>
+                  <div className="grid grid-cols-1 gap-2.5 text-xs text-slate-600 font-sans">
+                    <div className="flex gap-2">
+                      <span className="w-5 h-5 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center shrink-0 text-[10px]">1</span>
+                      <span>Copy your link above.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-5 h-5 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center shrink-0 text-[10px]">2</span>
+                      <span>Open Instagram and create a new Story.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-5 h-5 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center shrink-0 text-[10px]">3</span>
+                      <span>Select the <strong className="text-slate-800">"Link Sticker"</strong> tool, paste your URL, and write a catchy tag.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-5 h-5 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center shrink-0 text-[10px]">4</span>
+                      <span>Wait for secrets to roll in and reply instantly!</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3.5">
+                  <button
+                    onClick={() => navigate('/admin')}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-1 text-xs cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    Go to Dashboard
+                  </button>
+                  
+                  <button
+                    onClick={handleSignOut}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-3 px-4 rounded-xl transition-all text-xs cursor-pointer"
+                  >
+                    Sign Out / New Account
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </main>
 
