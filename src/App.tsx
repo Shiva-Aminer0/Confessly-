@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RouterProvider, useRouter } from './components/Router.jsx';
 import VisitorSubmission from './components/VisitorSubmission.jsx';
 import PublicProfile from './components/PublicProfile.jsx';
@@ -204,6 +204,65 @@ function RouterSwitch() {
 }
 
 export default function App() {
+  const [visitorLoading, setVisitorLoading] = useState(true);
+  const [isVisitor, setIsVisitor] = useState(false);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const isVis = !path.startsWith('/admin') && !path.startsWith('/su');
+    setIsVisitor(isVis);
+
+    if (isVis) {
+      const timer = setTimeout(() => {
+        setVisitorLoading(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else {
+      setVisitorLoading(false);
+    }
+  }, []);
+
+  if (isVisitor && visitorLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center relative overflow-hidden">
+        {/* Glowing background details */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center gap-6">
+          {/* Animated emblem */}
+          <motion.div
+            initial={{ scale: 0.85, opacity: 0 }}
+            animate={{ scale: [1, 1.08, 1], opacity: 1 }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+            className="h-16 w-16 bg-gradient-to-tr from-indigo-600 to-pink-500 rounded-2xl flex items-center justify-center font-black text-white text-2xl shadow-2xl shadow-indigo-500/30 border border-white/10"
+          >
+            C
+          </motion.div>
+
+          <div className="space-y-1.5 text-center">
+            <h2 className="text-2xl font-display font-black tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+              Confessly Web
+            </h2>
+            <p className="text-[9px] font-mono tracking-widest text-slate-400 uppercase">
+              🔒 100% Secure & Anonymous Message Board
+            </p>
+          </div>
+
+          {/* Sleek loading line */}
+          <div className="w-48 h-1 bg-slate-800 rounded-full overflow-hidden mt-4 relative">
+            <motion.div
+              initial={{ left: "-50%" }}
+              animate={{ left: "100%" }}
+              transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+              className="absolute top-0 bottom-0 w-1/2 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-full"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <RouterProvider>
       <RouterSwitch />

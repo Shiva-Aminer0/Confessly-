@@ -1,7 +1,9 @@
 {
-  "name": "Confessly Web",
+  "name": "Confessly",
   "description": "An anonymous confession platform with powerful admin moderation, super admin controls, metadata tracking, and beautiful sharing cards.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "geolocation"
+  ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]

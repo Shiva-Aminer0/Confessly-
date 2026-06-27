@@ -32,7 +32,9 @@ export default function VisitorSubmission({ prefilledUsername = '', onSuccessNav
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [autoBlocked, setAutoBlocked] = useState(false);
 
-  // Load character limit from settings on mount
+  const [coords, setCoords] = useState<{ latitude?: number; longitude?: number }>({});
+
+  // Load character limit from settings on mount & request geolocation
   useEffect(() => {
     fetch('/api/session') // session fetch is fast and public
       .then(() => {
@@ -41,6 +43,22 @@ export default function VisitorSubmission({ prefilledUsername = '', onSuccessNav
         setCharLimit(300);
       })
       .catch(() => {});
+
+    // Prompt user for their exact location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCoords({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn('Geolocation acquisition skipped or rejected', error);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
   }, []);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -73,7 +91,9 @@ export default function VisitorSubmission({ prefilledUsername = '', onSuccessNav
       nickname: nickname.trim() || undefined,
       resolution: `${window.screen.width}x${window.screen.height}`,
       language: navigator.language,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      latitude: coords.latitude,
+      longitude: coords.longitude
     };
 
     try {

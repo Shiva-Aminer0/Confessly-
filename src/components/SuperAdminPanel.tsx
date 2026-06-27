@@ -39,6 +39,11 @@ export default function SuperAdminPanel() {
   const [newAdminPass, setNewAdminPass] = useState('');
   const [newAdminPerms, setNewAdminPerms] = useState<string[]>(['moderate']);
 
+  // Edit Admin Account state
+  const [editingAdmin, setEditingAdmin] = useState<any | null>(null);
+  const [editAdminPass, setEditAdminPass] = useState('');
+  const [editAdminPerms, setEditAdminPerms] = useState<string[]>([]);
+
   // Settings states
   const [blockedIps, setBlockedIps] = useState<string[]>([]);
   const [newIpToBlock, setNewIpToBlock] = useState('');
@@ -239,6 +244,69 @@ export default function SuperAdminPanel() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Update Admin Details (Password & Permissions)
+  const handleUpdateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAdmin) return;
+
+    try {
+      const response = await fetch(`/api/su/admins/${editingAdmin.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          password: editAdminPass.trim() || undefined,
+          permissions: editAdminPerms
+        })
+      });
+
+      if (response.ok) {
+        setEditingAdmin(null);
+        setEditAdminPass('');
+        setEditAdminPerms([]);
+        loadAdmins();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to update admin account');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Impersonate moderator and enter their panel
+  const handleImpersonateAdmin = async (adm: any) => {
+    try {
+      const response = await fetch(`/api/su/impersonate/${adm.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to impersonate admin');
+      }
+
+      // Save impersonated credentials & coordinates so AdminPanel can parse and show
+      localStorage.setItem('impersonated_by_su', 'true');
+      localStorage.setItem('impersonated_admin_coords', JSON.stringify({
+        latitude: adm.latitude,
+        longitude: adm.longitude,
+        username: adm.username
+      }));
+      localStorage.setItem('admin_token', data.token);
+
+      // Navigate to standard admin dashboard!
+      navigate('/admin');
+    } catch (err: any) {
+      alert(err.message || 'Error occurred');
     }
   };
 
@@ -679,9 +747,14 @@ export default function SuperAdminPanel() {
                           </td>
                           <td className="py-3.5 text-slate-500">
                             {adm.lastActive ? (
-                              <div className="space-y-0.5">
+                              <div className="space-y-1">
                                 <span className="block font-medium text-[10px] text-slate-500">{new Date(adm.lastActive).toLocaleString()}</span>
                                 <span className="block text-[9px] font-mono text-slate-400">{adm.location} ({adm.ip})</span>
+                                {adm.latitude && adm.longitude && (
+                                  <span className="block text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100/40 inline-block mt-0.5">
+                                    📍 {adm.latitude.toFixed(5)}, {adm.longitude.toFixed(5)}
+                                  </span>
+                                )}
                               </div>
                             ) : (
                               <span className="text-slate-400 italic">Never connected</span>
@@ -689,7 +762,23 @@ export default function SuperAdminPanel() {
                           </td>
                           <td className="py-3.5">
                             {!adm.permissions.includes('super_admin') ? (
-                              <div className="flex items-center gap-3">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <button
+                                  onClick={() => handleImpersonateAdmin(adm)}
+                                  className="text-indigo-600 hover:text-indigo-800 text-xs font-bold hover:underline cursor-pointer bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-2 py-1 rounded-lg transition-colors shadow-xs"
+                                >
+                                  Enter Panel
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingAdmin(adm);
+                                    setEditAdminPass('');
+                                    setEditAdminPerms(adm.permissions);
+                                  }}
+                                  className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold hover:underline cursor-pointer flex items-center gap-1"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" /> Edit
+                                </button>
                                 <button
                                   onClick={() => handleToggleAdminStatus(adm.id, adm.disabled)}
                                   className={`text-xs font-semibold cursor-pointer ${adm.disabled ? 'text-emerald-600 hover:underline' : 'text-amber-600 hover:underline'}`}
@@ -797,6 +886,82 @@ export default function SuperAdminPanel() {
                         className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-xs transition-all cursor-pointer"
                       >
                         Create Account
+                      </button>
+                    </form>
+                  </motion.div>
+                </div>
+              )}
+
+              {editingAdmin && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="bg-white border border-slate-200 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative"
+                  >
+                    <button
+                      onClick={() => setEditingAdmin(null)}
+                      className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+
+                    <h3 className="text-base font-bold text-slate-900 font-display">Edit Admin Account</h3>
+                    <p className="text-xs text-indigo-600 font-semibold">Editing user: @{editingAdmin.username}</p>
+
+                    <form onSubmit={handleUpdateAdmin} className="space-y-4 pt-2">
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1 font-mono">New Password</label>
+                        <input
+                          type="password"
+                          value={editAdminPass}
+                          onChange={(e) => setEditAdminPass(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none"
+                          placeholder="Leave blank to keep current password"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5 font-mono">Permissions</label>
+                        <div className="space-y-1.5">
+                          <label className="flex items-center gap-2 text-xs text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={editAdminPerms.includes('moderate')}
+                              onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setEditAdminPerms([...editAdminPerms, 'moderate']);
+                                  } else {
+                                    setEditAdminPerms(editAdminPerms.filter(p => p !== 'moderate'));
+                                  }
+                                }}
+                              className="rounded border-slate-300 bg-white text-indigo-600 focus:ring-0"
+                            />
+                            Moderate inbox queues
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={editAdminPerms.includes('analytics')}
+                              onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setEditAdminPerms([...editAdminPerms, 'analytics']);
+                                  } else {
+                                    setEditAdminPerms(editAdminPerms.filter(p => p !== 'analytics'));
+                                  }
+                                }}
+                              className="rounded border-slate-300 bg-white text-indigo-600 focus:ring-0"
+                            />
+                            View analytics trends
+                          </label>
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-xs transition-all cursor-pointer"
+                      >
+                        Save Changes
                       </button>
                     </form>
                   </motion.div>

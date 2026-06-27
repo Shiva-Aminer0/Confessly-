@@ -16,6 +16,8 @@ export interface MessageMetadata {
   country: string;
   city: string;
   timestamp: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Message {
@@ -46,6 +48,8 @@ export interface AdminUser {
   location?: string;
   os?: string;
   device?: string;
+  latitude?: number;
+  longitude?: number;
   loginHistory: {
     timestamp: string;
     ip: string;
