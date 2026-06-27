@@ -131,7 +131,7 @@ function initializeDB() {
       user: 'system',
       action: 'SYSTEM_INITIALIZATION',
       ip: '127.0.0.1',
-      details: 'Confessly Web database bootstrapped successfully.'
+      details: 'Confessly database bootstrapped successfully.'
     }
   ];
 
@@ -517,7 +517,9 @@ async function startServer() {
 
     // Profanity Filter and Spam Auto-Flagging
     const containsProfanity = checkProfanity(message);
-    const status = containsProfanity ? 'deleted' : 'pending'; // Auto moderate profanity to deleted/trash
+    const isPublicBoard = cleanUsername === 'public';
+    const status = containsProfanity ? 'deleted' : (isPublicBoard ? 'approved' : 'pending'); // Auto-approve if directed to public board
+    const approved = isPublicBoard && !containsProfanity;
 
     const { browser, os, device } = parseUserAgent(ua);
     const location = getIpLocation(ip);
@@ -530,7 +532,7 @@ async function startServer() {
       emoji,
       theme,
       nickname: nickname?.trim() || 'Anonymous',
-      approved: false,
+      approved,
       favorite: false,
       status,
       createdAt: new Date().toISOString(),
@@ -566,6 +568,27 @@ async function startServer() {
         message: 'Submitted successfully'
       });
     }
+  });
+
+  // Get Global Public Board confessions (Approved only)
+  app.get('/api/public/board', (req, res) => {
+    const db = readDB();
+    const publicMessages = db.messages
+      .filter(m => m.status === 'approved')
+      .slice(0, 50)
+      .map(m => ({
+        id: m.id,
+        message: m.message,
+        category: m.category,
+        emoji: m.emoji,
+        theme: m.theme,
+        nickname: m.nickname,
+        targetUsername: m.targetUsername,
+        reply: m.reply,
+        createdAt: m.createdAt
+      }));
+
+    res.json({ messages: publicMessages });
   });
 
   // Get User profile public confessions (Approved only)
@@ -1027,7 +1050,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Confessly Web is listening on http://0.0.0.0:${PORT}`);
+    console.log(`Confessly is listening on http://0.0.0.0:${PORT}`);
   });
 }
 

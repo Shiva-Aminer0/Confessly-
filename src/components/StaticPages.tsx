@@ -34,7 +34,7 @@ export function PrivacyPolicy() {
 
           <div className="space-y-6 text-slate-600 leading-relaxed font-sans text-sm sm:text-base">
             <p>
-              Welcome to Confessly Web. Your privacy is paramount to us. Because we provide an anonymous submission platform, we want to be fully transparent about what data we collect, why we collect it, and how we protect it.
+              Welcome to Confessly. Your privacy is paramount to us. Because we provide an anonymous submission platform, we want to be fully transparent about what data we collect, why we collect it, and how we protect it.
             </p>
 
             <h2 className="text-xl font-display font-semibold text-slate-900 mt-8">1. Anonymous Submissions</h2>
@@ -102,12 +102,12 @@ export function TermsOfService() {
 
           <div className="space-y-6 text-slate-600 leading-relaxed font-sans text-sm sm:text-base">
             <p>
-              By accessing and using Confessly Web, you agree to comply with and be bound by the following terms and conditions.
+              By accessing and using Confessly, you agree to comply with and be bound by the following terms and conditions.
             </p>
 
             <h2 className="text-xl font-display font-semibold text-slate-900 mt-8">1. Authorized Usage</h2>
             <p>
-              Confessly Web is designed for entertainment, lighthearted communication, constructive feedback, and anonymous expressions. You agree not to use the platform for:
+              Confessly is designed for entertainment, lighthearted communication, constructive feedback, and anonymous expressions. You agree not to use the platform for:
             </p>
             <ul className="list-disc list-inside pl-4 space-y-2 text-slate-500 text-sm">
               <li>Bullying, personal harassment, or stalking of any specific individuals.</li>
@@ -123,7 +123,7 @@ export function TermsOfService() {
 
             <h2 className="text-xl font-display font-semibold text-slate-900 mt-8">3. User Responsibility</h2>
             <p>
-              You understand that you are solely responsible for the content you submit. Confessly Web assumes zero liability for user-submitted text, and user content does not represent the opinions of the platform owners or administrators.
+              You understand that you are solely responsible for the content you submit. Confessly assumes zero liability for user-submitted text, and user content does not represent the opinions of the platform owners or administrators.
             </p>
 
             <h2 className="text-xl font-display font-semibold text-slate-900 mt-8">4. Disclaimer of Warranties</h2>
